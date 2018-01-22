@@ -1,30 +1,28 @@
 #!/usr/bin/python
 
-# version 0.0.1
-# This is designed to be run locally on iWorkflow to remove stuck ASO in "ERROR_IN_DELETION" status 
-# 
+"""
+This is designed to be run locally on iWorkflow to remove stuck ASO in
+"ERROR_IN_DELETION" status. See "Remove Service" at:
+https://devcentral.f5.com/wiki/iWorkflow.APIRef_cm_cloud_tenants_tenant-name_services_iapp.ashx
+"""
 
 import json
 import httplib
-#import urllib
 from base64 import b64encode
 import optparse
 import sys
-from pprint import pprint
 import socket
-import ssl
 on_f5 = True
 
 parser = optparse.OptionParser()
 
-
-#print(dir(parser))
 
 # debug option for args
 parser.add_option(
     '-a',
     '--address',
     dest="address",
+    default="127.0.0.1",
     action="store",
     help="address of remote device"
     )
@@ -55,14 +53,10 @@ parser.add_option(
     default='admin',
     action="store",
     help="Remote user name"
-    )  
+    )
 
 
 options, remainder = parser.parse_args()
-
-# put required opts here
-if not options.address: # if -a not give
-    parser.error('IP address/host not given')
 
 
 # get auth token
@@ -232,7 +226,7 @@ if __name__ == "__main__":
             print "Placement ", p['appName'], " in status:"
             print "status ", p['status']
             print "For L4-L7 Service:"
-            print p['tenantServiceInstance']['selfLink'], "\n"
+            print p['tenantServiceInstance']['selfLink']
 
             # doing a PUT on L4-L7 Service with the body of itself
             # changes placement status to ERROR_IN_PLACEMENT
@@ -252,5 +246,6 @@ if __name__ == "__main__":
             # delete service right after, seems to only work if done quickly
             # I could not get to work by manually doing this with curl
             # I do not know the reason for this
+            print "Deleting ", p['appName'], "\n"
             delete_stat = delete(
                 address, url, auth_token, debug=False, on_f5=True)
