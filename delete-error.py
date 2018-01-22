@@ -4,6 +4,10 @@
 This is designed to be run locally on iWorkflow to remove stuck ASO in
 "ERROR_IN_DELETION" status. See "Remove Service" at:
 https://devcentral.f5.com/wiki/iWorkflow.APIRef_cm_cloud_tenants_tenant-name_services_iapp.ashx
+
+Usage:
+    ./delete-error.py -u username -p password
+
 """
 
 import json
@@ -12,7 +16,6 @@ from base64 import b64encode
 import optparse
 import sys
 import socket
-on_f5 = True
 
 parser = optparse.OptionParser()
 
@@ -60,7 +63,7 @@ options, remainder = parser.parse_args()
 
 
 # get auth token
-def get_token(user, password, address, debug=False, on_f5=True):
+def get_token(user, password, address, debug=False):
     conn = httplib.HTTPSConnection(address)
     cred = user + ":" + password
     userAndPass = b64encode(cred).decode("ascii")
@@ -88,7 +91,7 @@ def get_token(user, password, address, debug=False, on_f5=True):
 
 
 # GET
-def get(address, url, auth_token, debug=False, on_f5=True):
+def get(address, url, auth_token, debug=False):
     conn = httplib.HTTPSConnection(address)
     headers = {
         'X-F5-Auth-Token': auth_token, 'Content-Type': 'application/json'}
@@ -111,7 +114,7 @@ def get(address, url, auth_token, debug=False, on_f5=True):
 
 
 # PUT
-def put(address, url, auth_token, put_data, debug=False, on_f5=True):
+def put(address, url, auth_token, put_data, debug=False):
     conn = httplib.HTTPSConnection(address)
     headers = {
         'X-F5-Auth-Token': auth_token, 'Content-Type': 'application/json'}
@@ -134,7 +137,7 @@ def put(address, url, auth_token, put_data, debug=False, on_f5=True):
 
 
 # post
-def post(address, url, auth_token, post_data, debug=False, on_f5=True):
+def post(address, url, auth_token, post_data, debug=False):
     conn = httplib.HTTPSConnection(address)
     headers = {
         'X-F5-Auth-Token': auth_token, 'Content-Type': 'application/json'}
@@ -157,7 +160,7 @@ def post(address, url, auth_token, post_data, debug=False, on_f5=True):
 
 
 # PATCH
-def patch(address, url, auth_token, patch_data, debug=False, on_f5=True):
+def patch(address, url, auth_token, patch_data, debug=False):
     conn = httplib.HTTPSConnection(address)
     headers = {
         'X-F5-Auth-Token': auth_token, 'Content-Type': 'application/json'}
@@ -179,7 +182,7 @@ def patch(address, url, auth_token, patch_data, debug=False, on_f5=True):
     return patch_result
 
 
-def delete(address, url, auth_token, debug=False, on_f5=True):
+def delete(address, url, auth_token, debug=False):
     conn = httplib.HTTPSConnection(address)
     headers = {
         'X-F5-Auth-Token': auth_token, 'Content-Type': 'application/json'}
@@ -209,17 +212,16 @@ if __name__ == "__main__":
 
     # print arg info in debug
     if options.debug:
-        print "on_f5 = ", on_f5
         print "options dict: ", options, " remainder: ", remainder
 
     # get auth token
-    auth_token = get_token(user, password, address, debug, on_f5)
+    auth_token = get_token(user, password, address, debug)
     if options.debug:
         print "auth token is: ", auth_token
 
     # GET list of placemnts in "status": "ERROR_IN_DELETION"
     url = '/mgmt/cm/cloud/tenants/services/placements/'
-    get_placements = get(address, url, auth_token, debug, on_f5)
+    get_placements = get(address, url, auth_token, debug)
     placements_list = get_placements['items']
     for p in placements_list:
         if p['status'] == 'ERROR_IN_DELETION':
@@ -234,18 +236,18 @@ if __name__ == "__main__":
             url = p['tenantServiceInstance']['selfLink'][17:]
 
             # GET service json for PUT body
-            service = get(address, url, auth_token, debug, on_f5)
+            service = get(address, url, auth_token, debug)
 
             # format of PUT body
             put_data = json.dumps(service, indent=4)
 
             # Do PUT on the service to change placement status
             put_stat = put(
-                address, url, auth_token, put_data, debug=False, on_f5=True)
+                address, url, auth_token, put_data, debug=False)
 
             # delete service right after, seems to only work if done quickly
             # I could not get to work by manually doing this with curl
             # I do not know the reason for this
             print "Deleting ", p['appName'], "\n"
             delete_stat = delete(
-                address, url, auth_token, debug=False, on_f5=True)
+                address, url, auth_token, debug=False)
